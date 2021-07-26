@@ -63,14 +63,14 @@ class Header extends Component {
                     <ul className="submenu_list">
                     <li>
                     <a
-                      href="https://miniplugin.github.io/"
+                      href="https://kimilguk.github.io/"
                     >
                     코로나19확진자 방문처 조회
                     </a>
                   </li>
                   <li>
                     <a
-                      href="https://github.com/miniplugin/miniplugin.github.io/tree/master/app_covid19"
+                      href="https://github.com/kimilguk/kimilguk.github.io/tree/master/app_covid19"
                       target="_new"
                     >
                     Git 소스 정보

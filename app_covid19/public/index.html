@@ -12,49 +12,368 @@
     <script src="%PUBLIC_URL%design_publish/js/jquery-1.11.3.min.js"></script>
     <script src="%PUBLIC_URL%design_publish/js/common.js"></script>
     <script src="%PUBLIC_URL%design_publish/js/jquery.smooth-scroll.min.js"></script>
-    <!--[if lte IE 9]>
-      <script src="%PUBLIC_URL%design_publish/js/html5shiv.js"></script>
-      <script src="%PUBLIC_URL%design_publish/js/placeholders.min.js"></script>
-    <![endif]-->
-    <!--
-      위의 태그에서 % PUBLIC_URL %을 사용하는 것에 주목하십시오.
-      빌드하는 동안 'public' 폴더의 URL로 대체됩니다.
-      'public' 폴더 안에있는 파일들만 HTML에서 참조 할 수 있습니다.
+</head>
+<body>
+	<!-- 구글 맵 사용 (아래)-->
+	<div id="wrap"></div>
+	<!-- 카카오 맵 사용 (아래)-->
+	<style>
+		input, select, textarea { -webkit-appearance: checkbox; }
+		input[type='text'] { height: inherit; }
+	</style>
+	</style>
+	<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=ef34dcfb14fcb14d243605d3903e8135&libraries=services"></script>
+	<link href="kakaomap.css" rel="stylesheet" type="text/css" >
+	<div class="map_wrap">
+		<div id="map" style="width:100%;height:100%;position:relative;overflow:hidden;"></div>
+	
+		<div id="menu_wrap" class="bg_white">
+			<div class="option">
+				<div>
+					<form onsubmit="searchPlaces(); return false;">
+						현재 일시기준 9일전 자료까지 조회 됩니다.<br>
+						검색어 무시하고 전체 지도보기: <input type="checkbox" value="전체검색" id="search_all"><br>
+						키워드 : <input type="text" value="충남" id="keyword" size="15"> 
+						<button type="submit">검색하기</button>
+					</form>
+				</div>
+			</div>
+			<hr>
+			<ul id="placesList"></ul>
+			<div id="pagination" style="display: none;"></div>
+		</div>
+	</div>
+	
+	<script>
+	// 전체검색 기능 추가
+	var search_all = document.getElementById('search_all'); // 체크시 검색조건 건너띔
 
-      "/favicon.ico"또는 "favicon.ico"와 달리 "% PUBLIC_URL % / favicon.ico"는
-      클라이언트 측 라우팅 및 루트가 아닌 공개 URL 모두에서 올바르게 작동합니다.
-      'npm run build'를 실행하여 루트가 아닌 공개 URL을 구성하는 방법을 배웁니다.
-    -->
-    <style>
-      .secondMap div:nth-child(2) div {
-        display: none;
-      }
-      @media all and (max-width: 800px) {
-        .tit_page {
-          display: none;
+	// 마커를 담을 배열입니다
+	var markers = [];
+	
+	var mapContainer = document.getElementById('map'), // 지도를 표시할 div 
+		mapOption = {
+			//center: new kakao.maps.LatLng(37.566826, 126.9786567), // 지도의 중심좌표
+			center: new kakao.maps.LatLng(36.818434, 127.1527916), // 지도의 중심좌표
+			level: 3 // 지도의 확대 레벨
+		};  
+	
+	// 지도를 생성합니다    
+	var map = new kakao.maps.Map(mapContainer, mapOption); 
+	
+	// 장소 검색 객체를 생성합니다
+	var ps = new kakao.maps.services.Places();  
+	
+	// 검색 결과 목록이나 마커를 클릭했을 때 장소명을 표출할 인포윈도우를 생성합니다
+	var infowindow = new kakao.maps.InfoWindow({zIndex:1});
+	
+	// 키워드로 장소를 검색합니다
+	searchPlaces();
+	
+	// 키워드 검색을 요청하는 함수입니다
+	function searchPlaces() {
+		
+		var keyword = document.getElementById('keyword').value;
+	
+		if (!keyword.replace(/^\s+|\s+$/g, '')) {
+			alert('키워드를 입력해주세요!');
+			return false;
+		}
+	
+		// 장소검색 객체를 통해 키워드로 장소검색을 요청합니다
+		ps.keywordSearch( keyword, placesSearchCB); 
+	}
+	
+	/**
+     * 두 날짜의 차이를 일자로 구한다.(조회 종료일 - 조회 시작일)
+     *
+     * @param val1 - 조회 시작일(날짜 ex.2020-01-02)
+     * @param val2 - 조회 종료일(날짜 ex.2020-01-01)
+     * @return 기간에 해당하는 일자 위 결과는 1일
+     */
+	function calDateRange (val1, val2) {
+	var FORMAT = '-';
+	// FORMAT을 포함한 길이 체크
+	if (val1.length > 10 || val2.length > 10) return null;
+	// FORMAT이 있는지 체크
+	if (val1.indexOf (FORMAT) < 0 || val2.indexOf (FORMAT) < 0) return null;
+	// 년도, 월, 일로 분리
+	var start_dt = val1.split (FORMAT);
+	var end_dt = val2.split (FORMAT);
+	// 월 - 1(자바스크립트는 월이 0부터 시작하기 때문에...)
+	// Number()를 이용하여 08, 09월을 10진수로 인식하게 함.
+	start_dt[1] = Number (start_dt[1]) - 1 + '';
+	end_dt[1] = Number (end_dt[1]) - 1 + '';
+
+	var from_dt = new Date (start_dt[0], start_dt[1], start_dt[2]);
+	var to_dt = new Date (end_dt[0], end_dt[1], end_dt[2]);
+	return (to_dt.getTime () - from_dt.getTime ()) / 1000 / 60 / 60 / 24;
+	}
+
+	// 장소검색이 완료됐을 때 호출되는 콜백함수 입니다
+	function placesSearchCB(data, status, pagination) {
+	  fetch('https://coroname.me/getdata')//로컬에서 실시간
+      .then (response => response.text ())
+      .then (responseText => {
+        var rootjsondata = JSON.parse (responseText);
+        var jsondata = rootjsondata.data;
+		
+        var results = [];
+        let today = new Date ();
+        let year = today.getFullYear (); // 년도
+        let month = today.getMonth () + 1; // 월
+        let date = today.getDate (); // 날짜
+        //let day = today.getDay (); // 요일
+        var nows = year + '-' + month + '-' + date;
+        for (var i = 0; i < jsondata.length; i++) {
+          var dateSplit = jsondata[i]['visitedDate'].split('T');
+          var calDay = calDateRange (
+            dateSplit[0], nows
+          );
+		  var keyword = document.getElementById('keyword').value;
+		  //console.log("디버그" + jsondata[i]['address']);//JSON.stringify(jsondata)
+		  var n = jsondata[i]['address'].includes(keyword);//검색조건 추가 region 에서
+		  if(search_all.checked == true) {
+			n = true;
+		  }
+          if (calDay <= 9 && n === true) {
+            jsondata[i]['id'] = i;//여기서 마커 데이터 ID가 최초로 발생됨
+            results.push (jsondata[i]);
+          }
         }
-        .location_area ul.page_menu {
-          padding-top: 100px;
-          color: white;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <ul class="skipnavi">
-      <li><a href="#container">본문내용</a></li>
-    </ul>
-    <!-- wrap -->
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="wrap"></div>
-    <!--
-      이 HTML 파일은 템플릿입니다.
-      브라우저에서 직접 열면 빈 페이지가 나타납니다.
+	   if (results.length === 0) {
+          alert ('검색된 결과가 없습니다.');
+          return false;
+        } else {
+			//기존 data :
+			/*
+			[{
+			"address_name":"충남 천안시 동남구 목천읍 교천리 211-1"
+			,"category_group_code":"AT4"
+			,"category_group_name":"관광명소"
+			,"category_name":"여행 > 관광,명소 > 관광농원"
+			,"distance":""
+			,"id":"27089265"
+			,"phone":"041-585-4200"
+			,"place_name":"아름다운정원화수목"
+			,"place_url":"http://place.map.kakao.com/27089265"
+			,"road_address_name":"충남 천안시 동남구 목천읍 교천지산길 175"
+			,"x":"127.19380463666909"
+			,"y":"36.78336884498643"
+			}]
+			*/
+			//신규 results :
+			/*
+			[{
+			"_id":"60f53c59f0c0f648ef6cad7f"
+			,"region":"세종"
+			,"visitedDate":"2021-07-17T15:00:00.000Z"
+			,"latlng":"36.617818637669586
+			, 127.19087090085985"
+			,"address":"세종특별자치시 전의면 달전리 738"
+			,"placeEnglish":""
+			,"place":"레이캐슬골프앤리조트"
+			,"createDate":"2021-07-19T17:48:25.000Z"
+			,"__v":0
+			,"id":42
+			}]
+			*/
+			data = results;//기존 카카오맵자료를 코로나19자료로 변경
 
-      이 파일에 웹 폰트, 메타 태그 또는 분석을 추가 할 수 있습니다.
-      빌드 단계는 번들 스크립트를 <body> 태그에 배치합니다.
+			if (status === kakao.maps.services.Status.OK) {
+				// 정상적으로 검색이 완료됐으면
+				// 검색 목록과 마커를 표출합니다
+				displayPlaces(data);
+		
+				// 페이지 번호를 표출합니다
+				displayPagination(pagination);
+		
+			} else if (status === kakao.maps.services.Status.ZERO_RESULT) {
+		
+				alert('검색 결과가 존재하지 않습니다.');
+				return;
+		
+			} else if (status === kakao.maps.services.Status.ERROR) {
+		
+				alert('검색 결과 중 오류가 발생했습니다.');
+				return;
+		
+			}
+		}
+		});
+	}
+	
+	// 검색 결과 목록과 마커를 표출하는 함수입니다
+	function displayPlaces(places) {
+	
+		var listEl = document.getElementById('placesList'), 
+		menuEl = document.getElementById('menu_wrap'),
+		fragment = document.createDocumentFragment(), 
+		bounds = new kakao.maps.LatLngBounds(), 
+		listStr = '';
+		
+		// 검색 결과 목록에 추가된 항목들을 제거합니다
+		removeAllChildNods(listEl);
+	
+		// 지도에 표시되고 있는 마커를 제거합니다
+		removeMarker();
+		
+		for ( var i=0; i<places.length; i++ ) {
+			//기존 카카오맵 자료를 코로나19자료로 파싱 시작
+			if(places[i].y === undefined) {
+				var latlng_split = places[i].latlng.split (",");
+				var y = latlng_split[0];
+				var x = latlng_split[1];
+				places[i].y = y;
+				places[i].x = x;
+				places[i].place_name = places[i].place;
+				places[i].road_address_name = places[i].region;
+				places[i].address_name = places[i].address;
+				places[i].phone = places[i].createDate;
+			}
+			//기존 카카오맵 자료를 코로나19자료로 파싱 끝
 
-      개발을 시작하려면 'npm start' 또는 'yarn start'를 실행하십시오.
-      프로덕션 번들을 만들려면 'npm run build' 또는 'yarn build'를 사용하십시오. -->
-  </body>
-</html>
+			// 마커를 생성하고 지도에 표시합니다
+			var placePosition = new kakao.maps.LatLng(places[i].y, places[i].x),
+				marker = addMarker(placePosition, i), 
+				itemEl = getListItem(i, places[i]); // 검색 결과 항목 Element를 생성합니다
+	
+			// 검색된 장소 위치를 기준으로 지도 범위를 재설정하기위해
+			// LatLngBounds 객체에 좌표를 추가합니다
+			bounds.extend(placePosition);
+	
+			// 마커와 검색결과 항목에 mouseover 했을때
+			// 해당 장소에 인포윈도우에 장소명을 표시합니다
+			// mouseout 했을 때는 인포윈도우를 닫습니다
+			(function(marker, title) {
+				kakao.maps.event.addListener(marker, 'mouseover', function() {
+					displayInfowindow(marker, title);
+				});
+	
+				kakao.maps.event.addListener(marker, 'mouseout', function() {
+					infowindow.close();
+				});
+	
+				itemEl.onmouseover =  function () {
+					displayInfowindow(marker, title);
+				};
+	
+				itemEl.onmouseout =  function () {
+					infowindow.close();
+				};
+			})(marker, places[i].place_name);
+	
+			fragment.appendChild(itemEl);
+		}
+	
+		// 검색결과 항목들을 검색결과 목록 Elemnet에 추가합니다
+		listEl.appendChild(fragment);
+		menuEl.scrollTop = 0;
+	
+		// 검색된 장소 위치를 기준으로 지도 범위를 재설정합니다
+		map.setBounds(bounds);
+	}
+	
+	// 검색결과 항목을 Element로 반환하는 함수입니다
+	function getListItem(index, places) {
+	
+		var el = document.createElement('li'),
+		itemStr = '<span class="markerbg marker_' + (index+1) + '"></span>' +
+					'<div class="info">' +
+					'   <h5>' + places.place_name + '</h5>';
+	
+		if (places.road_address_name) {
+			itemStr += '    <span>' + places.road_address_name + '</span>' +
+						'   <span class="jibun gray">' +  places.address_name  + '</span>';
+		} else {
+			itemStr += '    <span>' +  places.address_name  + '</span>'; 
+		}
+					 
+		  itemStr += '  <span class="tel">방문일시:' + places.phone  + '</span>' +
+					'</div>';           
+	
+		el.innerHTML = itemStr;
+		el.className = 'item';
+	
+		return el;
+	}
+	
+	// 마커를 생성하고 지도 위에 마커를 표시하는 함수입니다
+	function addMarker(position, idx, title) {
+		var imageSrc = 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_number_blue.png', // 마커 이미지 url, 스프라이트 이미지를 씁니다
+			imageSize = new kakao.maps.Size(36, 37),  // 마커 이미지의 크기
+			imgOptions =  {
+				spriteSize : new kakao.maps.Size(36, 691), // 스프라이트 이미지의 크기
+				spriteOrigin : new kakao.maps.Point(0, (idx*46)+10), // 스프라이트 이미지 중 사용할 영역의 좌상단 좌표
+				offset: new kakao.maps.Point(13, 37) // 마커 좌표에 일치시킬 이미지 내에서의 좌표
+			},
+			markerImage = new kakao.maps.MarkerImage(imageSrc, imageSize, imgOptions),
+				marker = new kakao.maps.Marker({
+				position: position, // 마커의 위치
+				image: markerImage 
+			});
+	
+		marker.setMap(map); // 지도 위에 마커를 표출합니다
+		markers.push(marker);  // 배열에 생성된 마커를 추가합니다
+	
+		return marker;
+	}
+	
+	// 지도 위에 표시되고 있는 마커를 모두 제거합니다
+	function removeMarker() {
+		for ( var i = 0; i < markers.length; i++ ) {
+			markers[i].setMap(null);
+		}   
+		markers = [];
+	}
+	
+	// 검색결과 목록 하단에 페이지번호를 표시는 함수입니다
+	function displayPagination(pagination) {
+		var paginationEl = document.getElementById('pagination'),
+			fragment = document.createDocumentFragment(),
+			i; 
+	
+		// 기존에 추가된 페이지번호를 삭제합니다
+		while (paginationEl.hasChildNodes()) {
+			paginationEl.removeChild (paginationEl.lastChild);
+		}
+	
+		for (i=1; i<=pagination.last; i++) {
+			var el = document.createElement('a');
+			el.href = "#";
+			el.innerHTML = i;
+	
+			if (i===pagination.current) {
+				el.className = 'on';
+			} else {
+				el.onclick = (function(i) {
+					return function() {
+						pagination.gotoPage(i);
+					}
+				})(i);
+			}
+	
+			fragment.appendChild(el);
+		}
+		paginationEl.appendChild(fragment);
+	}
+	
+	// 검색결과 목록 또는 마커를 클릭했을 때 호출되는 함수입니다
+	// 인포윈도우에 장소명을 표시합니다
+	function displayInfowindow(marker, title) {
+		var content = '<div style="padding:5px;z-index:1;">' + title + '</div>';
+	
+		infowindow.setContent(content);
+		infowindow.open(map, marker);
+	}
+	
+	 // 검색결과 목록의 자식 Element를 제거하는 함수입니다
+	function removeAllChildNods(el) {   
+		while (el.hasChildNodes()) {
+			el.removeChild (el.lastChild);
+		}
+	}
+	</script>
+
+	</body>
+	</html>

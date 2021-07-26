@@ -4,10 +4,18 @@
 
 - 관련무료강좌로 생활코딩의 리액트강좌를 한번 들어보시는 것을 추천드립니다.(아래)
 - https://www.inflearn.com/course/react-%EC%83%9D%ED%99%9C%EC%BD%94%EB%94%A9#
-- 위 기술을 응용한 깃소스: https://github.com/miniplugin/miniplugin.github.io/tree/master/app_covid19
-- 위 기술적용 URL결과: https://miniplugin.github.io/
+- 위 기술을 응용한 깃소스: https://github.com/kimilguk/kimilguk.github.io/tree/master/app_covid19
+- 위 기술적용 URL결과: https://kimilguk.github.io/
 
 ---
+
+### 20210726 작업내역(구글맵 정책으로 카카오맵으로 볼수 있게 추가)
+- 2018년 이후 구글맵이 인증 Key 없이 더이상 무료로 지원하지 않기 때문에(아래 URL참조)
+- https://koko8829.tistory.com/2012
+- 구글 맵에 신용카드를 등록하는 부분이 꺼림직 하기 때문에, 카카오맵으로 옮기기로 합니다.
+- 카카오 맵 api는 무료이고, 일정 조회수를 넘어가면, 사용이 중단되는 구조입니다.(아래 URL참조)
+- https://devtalk.kakao.com/t/api/82867
+- 작업결과는 구글맵 하단에 있음.
 
 ### 20210301 작업내역(2021년 신규작업 아래)
 
@@ -20,7 +28,7 @@
 - 구글맵라이브러리설치: 작업폴더>npm install react-google-maps //엔터
 - 라이브러리 fix메세지 나오면: 작업폴더>npm audit fix //엔터
 - 깃에서 강사 자료 받아서, 위 app_covid19폴더 내용을 덮어씀
-- PC에서 앱실행: npm run start
+- PC에서 앱실행: npm run start (react-scripts은(는) 내부 또는 외부 명령, 실행할 수 있는 프로그램.. 에러발생시 npm install 을 실행한 후 재 실행하세요.)
 - 배포버전 만들기: 작업폴더>npm run build
 - 빌드폴더에 내용을 깃허브 레포지토리 루트에 올림.
 - 깃허브에 배포확인: https://miniplugin.github.io/
