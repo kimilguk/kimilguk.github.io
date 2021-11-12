@@ -9,9 +9,9 @@
 - 리액트버전: create-react-app --version 3.4.0
 - 폴더구조: /app/리액트 One페이지 게시판 앱 소스.
 - 폴더구조: /app_mask/리액트 공적마스크 판매처 및 재고 현황 조회 앱 소스.
-- app_mask 결과확인링크: https://miniplugin.github.io/
+- app_covid19 결과확인링크: https://kimilguk.github.io/
 - 폴더구조: /app_covid19/리액트 코로나19확진자 방문처 조회 앱 소스.
-- app_covid19 결과확인링크: http://covid19.paas-ta.org/
+- app_covid19 파스타 클라우드 결과확인링크: http://covid19.paas-ta.org/ (단, 신청 후 2주만 운영됩니다.)
 
 ---
 
